@@ -23,6 +23,6 @@ public class OrderServiceApplication {
         System.out.println("订单服务启动成功！");
         System.out.println("API文档地址：http://localhost:8083/swagger-ui/index.html");
         System.out.println("===========================================");
-        System.out.println("666");
+        System.out.println("66688888");
     }
 }
