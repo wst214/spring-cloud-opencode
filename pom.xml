@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Spring Cloud ERP系统父工程POM文件
+    
+    项目说明：
+    - 这是一个基于Spring Cloud的简单ERP系统
+    - 使用Nacos作为服务注册中心和配置中心
+    - 包含用户服务、商品服务、订单服务等微服务模块
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 
+         http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- 项目基本信息 -->
+    <groupId>com.erp</groupId>
+    <artifactId>spring-cloud-erp</artifactId>
+    <version>1.0.0</version>
+    <packaging>pom</packaging>
+    
+    <!-- 项目名称和描述 -->
+    <name>Spring Cloud ERP系统</name>
+    <description>基于Spring Cloud的简单ERP系统，包含用户、商品、订单等核心模块</description>
+
+    <!-- 定义父模块，所有微服务都在此目录下 -->
+    <!-- 注意：在Docker环境下，使用-pl参数指定要构建的模块 -->
+    <!-- <modules>
+        <module>erp-common</module>
+        <module>erp-user-service</module>
+        <module>erp-product-service</module>
+        <module>erp-order-service</module>
+        <module>erp-gateway</module>
+    </modules> -->
+
+    <!-- 统一管理依赖版本，便于升级和维护 -->
+    <properties>
+        <!-- Java版本 -->
+        <java.version>17</java.version>
+        
+        <!-- Spring Boot版本：2.7.x系列稳定版 -->
+        <spring-boot.version>2.7.18</spring-boot.version>
+        
+        <!-- Spring Cloud版本：2021.x系列，与Spring Boot 2.7.x兼容 -->
+        <spring-cloud.version>2021.0.8</spring-cloud.version>
+        
+        <!-- Spring Cloud Alibaba版本：提供Nacos、Sentinel等组件 -->
+        <spring-cloud-alibaba.version>2021.0.5.0</spring-cloud-alibaba.version>
+        
+        <!-- MyBatis Plus版本：增强的MyBatis ORM框架 -->
+        <mybatis-plus.version>3.5.3.1</mybatis-plus.version>
+        
+        <!-- MySQL驱动版本 -->
+        <mysql.version>8.0.33</mysql.version>
+        
+        <!-- Lombok版本：简化代码编写 -->
+        <lombok.version>1.18.32</lombok.version>
+        
+        <!-- Maven编译编码 -->
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+    </properties>
+
+    <!-- 依赖版本管理，使用dependencyManagement统一管理依赖版本 -->
+    <dependencyManagement>
+        <dependencies>
+            <!-- Spring Boot依赖管理 -->
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-dependencies</artifactId>
+                <version>${spring-boot.version}</version>
+                <!-- type=pom表示引入的是BOM（Bill of Materials），会管理所有Spring Boot相关依赖的版本 -->
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <!-- Spring Cloud依赖管理 -->
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-dependencies</artifactId>
+                <version>${spring-cloud.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <!-- Spring Cloud Alibaba依赖管理 -->
+            <dependency>
+                <groupId>com.alibaba.cloud</groupId>
+                <artifactId>spring-cloud-alibaba-dependencies</artifactId>
+                <version>${spring-cloud-alibaba.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <!-- MyBatis Plus依赖管理 -->
+            <dependency>
+                <groupId>com.baomidou</groupId>
+                <artifactId>mybatis-plus-boot-starter</artifactId>
+                <version>${mybatis-plus.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <!-- 构建配置 -->
+    <build>
+        <!-- 统一配置所有子模块的编译插件 -->
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.13.0</version>
+                <configuration>
+                    <!-- Java源文件和目标文件都使用配置的Java版本 -->
+                    <source>${java.version}</source>
+                    <target>${java.version}</target>
+                    <encoding>${project.build.sourceEncoding}</encoding>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+    <!-- Maven仓库配置 -->
+    <repositories>
+        <repository>
+            <!-- 使用阿里云镜像加速下载 -->
+            <id>aliyun</id>
+            <name>Aliyun Maven Repository</name>
+            <url>https://maven.aliyun.com/repository/public</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
+    </repositories>
+
+    <!-- 插件仓库配置 -->
+    <pluginRepositories>
+        <pluginRepository>
+            <id>aliyun</id>
+            <name>Aliyun Maven Plugin Repository</name>
+            <url>https://maven.aliyun.com/repository/public</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </pluginRepository>
+    </pluginRepositories>
+</project>

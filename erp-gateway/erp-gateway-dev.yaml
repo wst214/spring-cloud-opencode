@@ -1,0 +1,65 @@
+# =============================================
+# 网关服务 Nacos配置文件
+# 配置ID: erp-gateway-dev.yaml
+# =============================================
+
+spring:
+  # Spring Cloud Gateway配置
+  cloud:
+    gateway:
+      # 路由配置
+      routes:
+        # 用户服务路由
+        - id: erp-user-service
+          # 匹配路径：/user/**
+          uri: lb://erp-user-service
+          predicates:
+            - Path=/user/**
+        
+        # 商品服务路由
+        - id: erp-product-service
+          uri: lb://erp-product-service
+          predicates:
+            - Path=/product/**
+        
+        # 订单服务路由
+        - id: erp-order-service
+          uri: lb://erp-order-service
+          predicates:
+            - Path=/order/**
+      
+      # 全局跨域配置
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            # 允许所有来源
+            allowedOriginPatterns: "*"
+            # 允许的方法
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+            # 允许的头部
+            allowedHeaders: "*"
+            # 是否允许携带凭证
+            allowCredentials: true
+            # 预检请求缓存时间
+            maxAge: 3600
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    org.springframework.cloud.gateway: DEBUG
+    org.springframework: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{50} - %msg%n"

@@ -1,0 +1,43 @@
+# IDE相关文件
+.settings/
+.classpath
+.factorypath
+.project
+.idea/
+*.iml
+
+# 构建输出目录
+target/
+build/
+
+# 日志文件
+*.log
+logs/
+
+# 配置文件
+application.yml
+application.properties
+bootstrap.yml
+bootstrap.properties
+
+# 临时文件
+*.tmp
+*.temp
+*.swp
+*.swo
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# Maven相关
+.mvn/
+
+# Docker相关
+docker-compose.override.yml
+
+# 脚本文件
+init-nacos-config.bat
+init-nacos-config.sh
+start-docker.bat
+start-docker.sh

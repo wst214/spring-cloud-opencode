@@ -1,0 +1,80 @@
+# =============================================
+# ERP系统 Nacos配置文件
+# 命名空间：dev
+# 分组：ERP_GROUP
+# =============================================
+# 
+# 配置说明：
+# 这些配置存储在Nacos配置中心，各微服务启动时会从Nacos读取
+# 
+# 创建配置的方式：
+# 1. 访问 http://localhost:8848/nacos
+# 2. 登录（nacos/nacos123456）
+# 3. 进入"配置管理" -> "配置列表"
+# 4. 选择dev命名空间和ERP_GROUP分组
+# 5. 点击"+"号创建配置
+# =============================================
+
+# =============================================
+# 商品服务 Nacos配置文件
+# 配置ID: erp-user-service-dev.yaml
+# =============================================
+
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://mysql:3306/erp_user?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: root
+    password: root123456
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 30000
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+      write-bigdecimal-as-plain: true
+    generator:
+      write-numbers-as-strings: true
+
+mybatis-plus:
+  mapper-locations: classpath*:/mapper/**/*.xml
+  type-aliases-package: com.erp.user.entity
+  global-config:
+    db-config:
+      id-type: assign_id
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    map-underscore-to-camel-case: true
+
+server:
+  port: 8081
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  endpoint:
+    health:
+      show-details: always
+
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui/index.html
+    enabled: true
+    tags-sorter: alpha
+    operations-sorter: alpha
+
+logging:
+  level:
+    com.erp: DEBUG
+    org.springframework: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{50} - %msg%n"

@@ -1,0 +1,286 @@
+# Docker Compose配置文件
+# 用于启动Spring Cloud ERP系统的所有微服务
+
+services:
+  # =============================================
+  # MySQL数据库服务
+  # =============================================
+  mysql:
+    image: mysql:8.0
+    container_name: erp-mysql
+    restart: always
+    # 设置root密码
+    environment:
+      MYSQL_ROOT_PASSWORD: root123456
+      MYSQL_USER: erp
+      MYSQL_PASSWORD: erp123456
+      # 设置默认字符集
+      TZ: Asia/Shanghai
+    ports:
+      - "3306:3306"
+    # 数据卷映射
+    volumes:
+      # 初始化SQL脚本
+      - ./database/erp-init.sql:/docker-entrypoint-initdb.d/erp-init.sql
+      # 持久化数据
+      - mysql-data:/var/lib/mysql
+    # MySQL命令参数
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_general_ci
+      - --default-authentication-plugin=mysql_native_password
+      - --lower_case_table_names=1
+    # 健康检查
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - erp-network
+
+  # =============================================
+  # Nacos服务注册与配置中心
+  # =============================================
+  nacos:
+    image: nacos/nacos-server:v2.2.3
+    container_name: erp-nacos
+    restart: always
+    environment:
+      # 单机模式
+      MODE: standalone
+      # Nacos控制台账号密码
+      NACOS_AUTH_USERNAME: nacos
+      NACOS_AUTH_PASSWORD: nacos123456
+      # JVM参数
+      JVM_XMS: 512m
+      JVM_XMX: 512m
+      JVM_XMN: 256m
+      # 时区
+      TZ: Asia/Shanghai
+    ports:
+      - "8848:8848"      # Nacos主端口
+      - "9848:9848"      # gRPC端口（Nacos 2.x需要）
+    # 数据卷映射
+    volumes:
+      # 持久化数据
+      - nacos-data:/home/nacos/data
+      # 持久化日志
+      - nacos-logs:/home/nacos/logs
+    # 健康检查
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8848/nacos"]
+      interval: 15s
+      timeout: 10s
+      retries: 3
+    networks:
+      - erp-network
+
+  # =============================================
+  # Nacos配置初始化服务
+  # =============================================
+  nacos-config:
+    image: curlimages/curl:latest
+    container_name: erp-nacos-config
+    restart: "no"
+    command: >
+      /bin/sh -c '
+        echo "等待Nacos启动...";
+        sleep 30;
+        echo "开始创建Nacos配置...";
+        content=$$(cat /config/erp-user-service-dev.yaml);
+        curl -X POST "http://nacos:8848/nacos/v1/cs/configs" -u "nacos:nacos123456" -d "dataId=erp-user-service-dev.yaml" -d "group=DEFAULT_GROUP" -d "type=yaml" -d "content=$$content";
+        content=$$(cat /config/erp-product-service-dev.yaml);
+        curl -X POST "http://nacos:8848/nacos/v1/cs/configs" -u "nacos:nacos123456" -d "dataId=erp-product-service-dev.yaml" -d "group=DEFAULT_GROUP" -d "type=yaml" -d "content=$$content";
+        content=$$(cat /config/erp-order-service-dev.yaml);
+        curl -X POST "http://nacos:8848/nacos/v1/cs/configs" -u "nacos:nacos123456" -d "dataId=erp-order-service-dev.yaml" -d "group=DEFAULT_GROUP" -d "type=yaml" -d "content=$$content";
+        content=$$(cat /config/erp-gateway-dev.yaml);
+        curl -X POST "http://nacos:8848/nacos/v1/cs/configs" -u "nacos:nacos123456" -d "dataId=erp-gateway-dev.yaml" -d "group=DEFAULT_GROUP" -d "type=yaml" -d "content=$$content";
+        echo "配置创建完成！"
+      '
+    volumes:
+      - ./erp-user-service/erp-user-service-dev.yaml:/config/erp-user-service-dev.yaml:ro
+      - ./erp-product-service/erp-product-service-dev.yaml:/config/erp-product-service-dev.yaml:ro
+      - ./erp-order-service/erp-order-service-dev.yaml:/config/erp-order-service-dev.yaml:ro
+      - ./erp-gateway/erp-gateway-dev.yaml:/config/erp-gateway-dev.yaml:ro
+    depends_on:
+      nacos:
+        condition: service_healthy
+    networks:
+      - erp-network
+
+  # =============================================
+  # API网关服务
+  # =============================================
+  gateway:
+    build:
+      context: .
+      dockerfile: erp-gateway/Dockerfile
+    image: erp-gateway:latest
+    container_name: erp-gateway
+    restart: always
+    environment:
+      # Nacos地址（使用docker网络服务名）
+      NACOS_SERVER_ADDR: nacos
+      NACOS_SERVER_PORT: 8848
+      # 时区
+      TZ: Asia/Shanghai
+    ports:
+      - "8080:8080"
+    # 依赖其他服务
+    depends_on:
+      nacos:
+        condition: service_healthy
+    # 网络模式
+    networks:
+      - erp-network
+
+  # =============================================
+  # 用户服务
+  # =============================================
+  user-service:
+    build:
+      context: .
+      dockerfile: erp-user-service/Dockerfile
+    image: erp-user-service:latest
+    container_name: erp-user-service
+    restart: always
+    environment:
+      # 数据库配置
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/erp_user?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root123456
+      # Nacos配置
+      NACOS_SERVER_ADDR: nacos
+      NACOS_SERVER_PORT: 8848
+      # 时区
+      TZ: Asia/Shanghai
+    ports:
+      - "8081:8081"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      nacos:
+        condition: service_healthy
+    networks:
+      - erp-network
+
+  # =============================================
+  # 商品服务
+  # =============================================
+  product-service:
+    build:
+      context: .
+      dockerfile: erp-product-service/Dockerfile
+    image: erp-product-service:latest
+    container_name: erp-product-service
+    restart: always
+    environment:
+      # 数据库配置
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/erp_product?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root123456
+      # Nacos配置
+      NACOS_SERVER_ADDR: nacos
+      NACOS_SERVER_PORT: 8848
+      # 时区
+      TZ: Asia/Shanghai
+    ports:
+      - "8082:8082"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      nacos:
+        condition: service_healthy
+    networks:
+      - erp-network
+
+  # =============================================
+  # 订单服务
+  # =============================================
+  order-service:
+    build:
+      context: .
+      dockerfile: erp-order-service/Dockerfile
+    image: erp-order-service:latest
+    container_name: erp-order-service
+    restart: always
+    environment:
+      # 数据库配置
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/erp_order?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root123456
+      # Nacos配置
+      NACOS_SERVER_ADDR: nacos
+      NACOS_SERVER_PORT: 8848
+      # 时区
+      TZ: Asia/Shanghai
+    ports:
+      - "8083:8083"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      nacos:
+        condition: service_healthy
+    networks:
+      - erp-network
+
+  # =============================================
+  # 前端管理页面
+  # =============================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    image: erp-frontend:latest
+    container_name: erp-frontend
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - gateway
+    networks:
+      - erp-network
+
+  # =============================================
+  # Jenkins CI/CD服务
+  # =============================================
+  jenkins:
+    image: jenkins/jenkins:lts
+    container_name: erp-jenkins
+    restart: always
+    ports:
+      - "8088:8080"      # Jenkins web界面
+      - "50000:50000"    # Jenkins agent通信端口
+    volumes:
+      - jenkins-data:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock  # 允许Jenkins操作Docker
+    environment:
+      - TZ=Asia/Shanghai
+      - JAVA_OPTS=-Djava.awt.headless=true -Xmx1024m
+    networks:
+      - erp-network
+
+# =============================================
+# 数据卷定义
+# =============================================
+volumes:
+  # MySQL数据卷
+  mysql-data:
+    driver: local
+  # Nacos数据卷
+  nacos-data:
+    driver: local
+  nacos-logs:
+    driver: local
+  # Jenkins数据卷
+  jenkins-data:
+    driver: local
+
+# =============================================
+# 网络定义
+# =============================================
+networks:
+  # 自定义网络，所有容器在此网络中通信
+  erp-network:
+    driver: bridge

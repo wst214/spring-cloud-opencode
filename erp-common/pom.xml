@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    ERP通用模块POM文件
+    
+    模块说明：
+    - 该模块包含所有微服务共享的公共代码
+    - 主要包括：实体类、响应结果类、工具类、异常类等
+    - 所有其他微服务都依赖此模块
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 
+         http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- 继承父工程的坐标信息 -->
+    <parent>
+        <groupId>com.erp</groupId>
+        <artifactId>spring-cloud-erp</artifactId>
+        <version>1.0.0</version>
+    </parent>
+
+    <!-- 当前模块坐标 -->
+    <artifactId>erp-common</artifactId>
+    <name>ERP通用模块</name>
+    <description>存放所有微服务共享的公共代码</description>
+
+    <!-- 打包类型为jar，供其他模块依赖 -->
+    <packaging>jar</packaging>
+
+    <!-- 依赖配置 -->
+    <dependencies>
+        <!-- Spring Boot Web依赖：提供Web开发支持，包括RESTful API -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <!-- Spring Boot Validation依赖：用于参数校验，如@NotNull、@NotBlank等 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+
+        <!-- MyBatis Plus依赖：增强的MyBatis ORM框架，简化数据库操作 -->
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-boot-starter</artifactId>
+        </dependency>
+
+        <!-- MySQL驱动依赖：连接MySQL数据库 -->
+        <dependency>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+            <version>${mysql.version}</version>
+        </dependency>
+
+        <!-- Lombok依赖：通过注解自动生成getter、setter、toString等方法，减少样板代码 -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>${lombok.version}</version>
+            <!-- provided表示只在编译时使用，打包时不包含 -->
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- Spring Boot Actuator依赖：提供应用监控和健康检查端点 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
+        <!-- 引入Hutool工具库：提供丰富的工具方法，如日期处理、字符串处理、JSON处理等 -->
+        <dependency>
+            <groupId>cn.hutool</groupId>
+            <artifactId>hutool-all</artifactId>
+            <version>5.8.21</version>
+        </dependency>
+
+        <!-- Jackson依赖：JSON序列化和反序列化 -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+    </dependencies>
+</project>

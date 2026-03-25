@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ERP管理系统</title>
+    <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background: #f5f5f5; }
+        .sidebar {
+            min-height: 100vh;
+            background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+            color: white;
+            padding-top: 20px;
+        }
+        .sidebar .nav-link {
+            color: rgba(255,255,255,0.8);
+            padding: 12px 20px;
+            margin: 5px 0;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+        .sidebar .nav-link:hover, .sidebar .nav-link.active {
+            background: rgba(255,255,255,0.1);
+            color: white;
+        }
+        .sidebar .nav-link i { width: 25px; }
+        .content { padding: 20px; }
+        .card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .card-header {
+            background: white;
+            border: none;
+            font-weight: 600;
+            padding: 15px 20px;
+        }
+        .table { margin-bottom: 0; }
+        .table th { border: none; color: #666; font-weight: 500; }
+        .btn-primary { background: #0d6efd; border: none; }
+        .btn-primary:hover { background: #0b5ed7; }
+        .status-badge { padding: 5px 12px; border-radius: 20px; }
+        .status-active { background: #d4edda; color: #155724; }
+        .status-inactive { background: #f8d7da; color: #721c24; }
+        .loading {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex; justify-content: center; align-items: center;
+            z-index: 9999;
+        }
+        .spinner { width: 50px; height: 50px; }
+        .toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; }
+    </style>
+</head>
+<body>
+    <div class="loading" id="loading" style="display:none;">
+        <div class="spinner-border text-light spinner" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <div class="container-fluid">
+        <div class="row">
+            <!-- 侧边栏 -->
+            <div class="col-md-2 sidebar">
+                <h4 class="text-center mb-4">
+                    <i class="fas fa-cube"></i> ERP系统
+                </h4>
+                <div class="user-info text-center mb-4 pb-3 border-bottom">
+                    <i class="fas fa-user-circle fa-3x mb-2"></i>
+                    <p class="mb-0" id="currentUser">未登录</p>
+                </div>
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="#" onclick="showModule('user')">
+                            <i class="fas fa-users"></i> 用户管理
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" onclick="showModule('product')">
+                            <i class="fas fa-box"></i> 商品管理
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" onclick="showModule('order')">
+                            <i class="fas fa-shopping-cart"></i> 订单管理
+                        </a>
+                    </li>
+                </ul>
+                <div class="mt-auto p-3 border-top">
+                    <button class="btn btn-outline-light w-100" onclick="logout()">
+                        <i class="fas fa-sign-out-alt"></i> 退出登录
+                    </button>
+                </div>
+            </div>
+
+            <!-- 主内容 -->
+            <div class="col-md-10 content">
+                <!-- 用户管理 -->
+                <div id="userModule" class="module">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h4><i class="fas fa-users"></i> 用户管理</h4>
+                        <button class="btn btn-primary" onclick="showModal('userModal')">
+                            <i class="fas fa-plus"></i> 添加用户
+                        </button>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">用户列表</div>
+                        <div class="card-body p-0">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>用户名</th>
+                                        <th>姓名</th>
+                                        <th>手机</th>
+                                        <th>邮箱</th>
+                                        <th>状态</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="userTable"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 商品管理 -->
+                <div id="productModule" class="module" style="display:none;">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h4><i class="fas fa-box"></i> 商品管理</h4>
+                        <button class="btn btn-primary" onclick="showModal('productModal')">
+                            <i class="fas fa-plus"></i> 添加商品
+                        </button>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">商品列表</div>
+                        <div class="card-body p-0">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>商品编码</th>
+                                        <th>商品名称</th>
+                                        <th>分类</th>
+                                        <th>价格</th>
+                                        <th>库存</th>
+                                        <th>状态</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="productTable"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 订单管理 -->
+                <div id="orderModule" class="module" style="display:none;">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h4><i class="fas fa-shopping-cart"></i> 订单管理</h4>
+                        <button class="btn btn-primary" onclick="showModal('orderModal')">
+                            <i class="fas fa-plus"></i> 创建订单
+                        </button>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">订单列表</div>
+                        <div class="card-body p-0">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>订单号</th>
+                                        <th>用户名</th>
+                                        <th>商品</th>
+                                        <th>数量</th>
+                                        <th>总金额</th>
+                                        <th>状态</th>
+                                        <th>下单时间</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="orderTable"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 用户Modal -->
+    <div class="modal fade" id="userModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">用户信息</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="userId">
+                    <div class="mb-3">
+                        <label class="form-label">用户名</label>
+                        <input type="text" class="form-control" id="username" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">真实姓名</label>
+                        <input type="text" class="form-control" id="realName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">手机号</label>
+                        <input type="text" class="form-control" id="phone" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">邮箱</label>
+                        <input type="email" class="form-control" id="email" required>
+                    </div>
+                    <div class="mb-3" id="passwordGroup">
+                        <label class="form-label">密码</label>
+                        <input type="password" class="form-control" id="password">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="saveUser()">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 商品Modal -->
+    <div class="modal fade" id="productModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">商品信息</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="productId">
+                    <div class="mb-3">
+                        <label class="form-label">商品编码</label>
+                        <input type="text" class="form-control" id="productCode" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">商品名称</label>
+                        <input type="text" class="form-control" id="productName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">分类</label>
+                        <select class="form-select" id="productCategory">
+                            <option value="电子产品">电子产品</option>
+                            <option value="服装">服装</option>
+                            <option value="食品">食品</option>
+                            <option value="图书">图书</option>
+                            <option value="其他">其他</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">价格</label>
+                        <input type="number" class="form-control" id="productPrice" step="0.01" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">库存</label>
+                        <input type="number" class="form-control" id="productStock" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="saveProduct()">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 订单Modal -->
+    <div class="modal fade" id="orderModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">创建订单</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">选择用户</label>
+                        <select class="form-select" id="orderUserId"></select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">选择商品</label>
+                        <select class="form-select" id="orderProductId" onchange="updateProductPrice()">
+                            <option value="">请选择商品</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">单价</label>
+                        <input type="text" class="form-control" id="orderPrice" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">数量</label>
+                        <input type="number" class="form-control" id="orderQuantity" value="1" min="1" onchange="updateTotalAmount()">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">总金额</label>
+                        <input type="text" class="form-control" id="orderTotalAmount" readonly>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="createOrder()">创建订单</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 登录Modal -->
+    <div class="modal fade" id="loginModal" tabindex="-1">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">用户登录</h5>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">用户名</label>
+                        <input type="text" class="form-control" id="loginUsername">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">密码</label>
+                        <input type="password" class="form-control" id="loginPassword">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary w-100" onclick="login()">登录</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.bootcdn.net/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Docker部署时使用相对路径，通过nginx代理访问
+        const API_BASE = '/api';
+        const USER_SERVICE = '/api/user';
+        const PRODUCT_SERVICE = '/api/product';
+        const ORDER_SERVICE = '/api/order';
+        
+        let currentUserId = localStorage.getItem('userId');
+        let currentUsername = localStorage.getItem('username');
+        let products = [];
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            if (currentUserId) {
+                document.getElementById('currentUser').textContent = currentUsername;
+                loadAllData();
+            } else {
+                new bootstrap.Modal(document.getElementById('loginModal')).show();
+            }
+        });
+
+        // 登录
+        async function login() {
+            const username = document.getElementById('loginUsername').value;
+            const password = document.getElementById('loginPassword').value;
+            
+            if (!username || !password) {
+                showToast('请输入用户名和密码', 'warning');
+                return;
+            }
+
+            showLoading();
+            try {
+                const res = await fetch(`${USER_SERVICE}/login`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json; charset=utf-8'},
+                    body: JSON.stringify({username, password})
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    localStorage.setItem('userId', data.data.userId);
+                    localStorage.setItem('username', data.data.username);
+                    currentUserId = data.data.userId;
+                    currentUsername = data.data.username;
+                    document.getElementById('currentUser').textContent = currentUsername;
+                    bootstrap.Modal.getInstance(document.getElementById('loginModal')).hide();
+                    showToast('登录成功', 'success');
+                    loadAllData();
+                } else {
+                    showToast(data.message || '登录失败', 'danger');
+                }
+            } catch (e) {
+                showToast('登录失败: ' + e.message, 'danger');
+            }
+            hideLoading();
+        }
+
+        // 退出登录
+        function logout() {
+            localStorage.removeItem('userId');
+            localStorage.removeItem('username');
+            currentUserId = null;
+            currentUsername = null;
+            new bootstrap.Modal(document.getElementById('loginModal')).show();
+        }
+
+        // 加载所有数据
+        function loadAllData() {
+            loadUsers();
+            loadProducts();
+            loadOrders();
+        }
+
+        // 显示模块
+        function showModule(module) {
+            document.querySelectorAll('.module').forEach(m => m.style.display = 'none');
+            document.getElementById(module + 'Module').style.display = 'block';
+            document.querySelectorAll('.sidebar .nav-link').forEach(n => n.classList.remove('active'));
+            event.target.classList.add('active');
+        }
+
+        // ===== 用户管理 =====
+        async function loadUsers() {
+            showLoading();
+            try {
+                const res = await fetch(`${USER_SERVICE}/list`);
+                const data = await res.json();
+                if (data.success) {
+                    renderUsers(data.data);
+                }
+            } catch (e) {
+                showToast('加载用户失败', 'danger');
+            }
+            hideLoading();
+        }
+
+        function renderUsers(users) {
+            const tbody = document.getElementById('userTable');
+            tbody.innerHTML = users.map(u => `
+                <tr>
+                    <td>${u.id}</td>
+                    <td>${u.username}</td>
+                    <td>${u.realName || '-'}</td>
+                    <td>${u.phone || '-'}</td>
+                    <td>${u.email || '-'}</td>
+                    <td>
+                        <span class="status-badge ${u.status === 1 ? 'status-active' : 'status-inactive'}">
+                            ${u.status === 1 ? '启用' : '禁用'}
+                        </span>
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editUser('${u.id}')">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteUser('${u.id}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function showAddUser() {
+            document.getElementById('userId').value = '';
+            document.getElementById('username').value = '';
+            document.getElementById('username').readOnly = false;
+            document.getElementById('realName').value = '';
+            document.getElementById('phone').value = '';
+            document.getElementById('email').value = '';
+            document.getElementById('password').value = '';
+            document.getElementById('passwordGroup').style.display = 'block';
+            new bootstrap.Modal(document.getElementById('userModal')).show();
+        }
+
+        async function editUser(id) {
+            try {
+                const res = await fetch(`${USER_SERVICE}/${id}`);
+                const data = await res.json();
+                if (data.success && data.data) {
+                    const u = data.data;
+                    document.getElementById('userId').value = u.id;
+                    document.getElementById('username').value = u.username;
+                    document.getElementById('username').readOnly = true;
+                    document.getElementById('realName').value = u.realName;
+                    document.getElementById('phone').value = u.phone;
+                    document.getElementById('email').value = u.email;
+                    document.getElementById('password').value = '';
+                    document.getElementById('passwordGroup').style.display = 'none';
+                    new bootstrap.Modal(document.getElementById('userModal')).show();
+                } else {
+                    showToast('用户不存在', 'danger');
+                }
+            } catch (e) {
+                console.error('获取用户信息失败:', e);
+                showToast('获取用户信息失败', 'danger');
+            }
+        }
+
+        async function saveUser() {
+            const id = document.getElementById('userId').value;
+            const user = {
+                username: document.getElementById('username').value,
+                realName: document.getElementById('realName').value,
+                phone: document.getElementById('phone').value,
+                email: document.getElementById('email').value
+            };
+
+            if (!user.username || !user.realName) {
+                showToast('请填写必填项', 'warning');
+                return;
+            }
+
+            showLoading();
+            try {
+                let res;
+                if (id) {
+                    user.id = id;
+                    res = await fetch(`${USER_SERVICE}`, {
+                        method: 'PUT',
+                        headers: {'Content-Type': 'application/json; charset=utf-8'},
+                        body: JSON.stringify(user)
+                    });
+                } else {
+                    user.password = document.getElementById('password').value;
+                    user.confirmPassword = user.password;
+                    res = await fetch(`${USER_SERVICE}/register`, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json; charset=utf-8'},
+                        body: JSON.stringify(user)
+                    });
+                }
+                const data = await res.json();
+                if (data.success) {
+                    showToast(id ? '更新成功' : '添加成功', 'success');
+                    bootstrap.Modal.getInstance(document.getElementById('userModal')).hide();
+                    loadUsers();
+                } else {
+                    showToast(data.message || '操作失败', 'danger');
+                }
+            } catch (e) {
+                showToast('操作失败: ' + e.message, 'danger');
+            }
+            hideLoading();
+        }
+
+        async function deleteUser(id) {
+            if (!confirm('确定要删除该用户吗？')) return;
+            showLoading();
+            try {
+                const res = await fetch(`${USER_SERVICE}/${id}`, {method: 'DELETE'});
+                const data = await res.json();
+                if (data.success) {
+                    showToast('删除成功', 'success');
+                    loadUsers();
+                } else {
+                    showToast(data.message || '删除失败', 'danger');
+                }
+            } catch (e) {
+                showToast('删除失败', 'danger');
+            }
+            hideLoading();
+        }
+
+        // ===== 商品管理 =====
+        async function loadProducts() {
+            showLoading();
+            try {
+                const res = await fetch(`${PRODUCT_SERVICE}/list`);
+                const data = await res.json();
+                if (data.success) {
+                    products = data.data;
+                    products.forEach(p => p.id = String(p.id));
+                    renderProducts(products);
+                    updateProductSelect(products);
+                }
+            } catch (e) {
+                showToast('加载商品失败', 'danger');
+            }
+            hideLoading();
+        }
+
+        function renderProducts(products) {
+            const tbody = document.getElementById('productTable');
+            tbody.innerHTML = products.map(p => `
+                <tr>
+                    <td>${p.id}</td>
+                    <td>${p.productCode}</td>
+                    <td>${p.productName}</td>
+                    <td>${p.categoryName || '-'}</td>
+                    <td>¥${p.price}</td>
+                    <td>${p.stock}</td>
+                    <td>
+                        <span class="status-badge ${p.status === 1 ? 'status-active' : 'status-inactive'}">
+                            ${p.status === 1 ? '上架' : '下架'}
+                        </span>
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editProduct('${p.id}')">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteProduct('${p.id}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function updateProductSelect(products) {
+            const select = document.getElementById('orderProductId');
+            select.innerHTML = '<option value="">请选择商品</option>' + 
+                products.filter(p => p.status === 1).map(p => 
+                    `<option value="${p.id}" data-price="${p.price}">${p.productName} - ¥${p.price}</option>`
+                ).join('');
+        }
+
+        function updateProductPrice() {
+            const select = document.getElementById('orderProductId');
+            const option = select.options[select.selectedIndex];
+            if (option && option.dataset.price) {
+                document.getElementById('orderPrice').value = option.dataset.price;
+                updateTotalAmount();
+            }
+        }
+
+        function updateTotalAmount() {
+            const price = parseFloat(document.getElementById('orderPrice').value) || 0;
+            const quantity = parseInt(document.getElementById('orderQuantity').value) || 0;
+            document.getElementById('orderTotalAmount').value = (price * quantity).toFixed(2);
+        }
+
+        async function editProduct(id) {
+            const p = products.find(prod => String(prod.id) === String(id));
+            if (p) {
+                document.getElementById('productId').value = p.id;
+                document.getElementById('productCode').value = p.productCode;
+                document.getElementById('productCode').readOnly = true;
+                document.getElementById('productName').value = p.productName;
+                document.getElementById('productCategory').value = p.categoryName || '其他';
+                document.getElementById('productPrice').value = p.price;
+                document.getElementById('productStock').value = p.stock;
+                new bootstrap.Modal(document.getElementById('productModal')).show();
+            }
+        }
+
+        function showAddProduct() {
+            document.getElementById('productId').value = '';
+            document.getElementById('productCode').value = '';
+            document.getElementById('productCode').readOnly = false;
+            document.getElementById('productName').value = '';
+            document.getElementById('productCategory').value = '电子产品';
+            document.getElementById('productPrice').value = '';
+            document.getElementById('productStock').value = '';
+            new bootstrap.Modal(document.getElementById('productModal')).show();
+        }
+
+        async function saveProduct() {
+            const id = document.getElementById('productId').value;
+            const product = {
+                productCode: document.getElementById('productCode').value,
+                productName: document.getElementById('productName').value,
+                categoryName: document.getElementById('productCategory').value,
+                price: parseFloat(document.getElementById('productPrice').value),
+                stock: parseInt(document.getElementById('productStock').value),
+                status: 1,
+                unit: '个'
+            };
+
+            if (!product.productCode || !product.productName) {
+                showToast('请填写必填项', 'warning');
+                return;
+            }
+
+            showLoading();
+            try {
+                const url = `${PRODUCT_SERVICE}`;
+                const method = id ? 'PUT' : 'POST';
+                if (id) product.id = id;
+                
+                const res = await fetch(url, {
+                    method,
+                    headers: {'Content-Type': 'application/json; charset=utf-8'},
+                    body: JSON.stringify(product)
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast(id ? '更新成功' : '添加成功', 'success');
+                    bootstrap.Modal.getInstance(document.getElementById('productModal')).hide();
+                    loadProducts();
+                } else {
+                    showToast(data.message || '操作失败', 'danger');
+                }
+            } catch (e) {
+                showToast('操作失败: ' + e.message, 'danger');
+            }
+            hideLoading();
+        }
+
+        async function deleteProduct(id) {
+            if (!confirm('确定要删除该商品吗？')) return;
+            showLoading();
+            try {
+                const res = await fetch(`${PRODUCT_SERVICE}/${id}`, {method: 'DELETE'});
+                const data = await res.json();
+                if (data.success) {
+                    showToast('删除成功', 'success');
+                    loadProducts();
+                } else {
+                    showToast(data.message || '删除失败', 'danger');
+                }
+            } catch (e) {
+                showToast('删除失败', 'danger');
+            }
+            hideLoading();
+        }
+
+        // ===== 订单管理 =====
+        async function loadOrders() {
+            showLoading();
+            try {
+                const res = await fetch(`${ORDER_SERVICE}/list`);
+                const data = await res.json();
+                if (data.success) {
+                    renderOrders(data.data);
+                }
+            } catch (e) {
+                showToast('加载订单失败', 'danger');
+            }
+            hideLoading();
+        }
+
+        async function renderOrders(orders) {
+            // 获取用户名和商品名的映射
+            const userRes = await fetch(`${USER_SERVICE}/list`);
+            const userData = await userRes.json();
+            const userMap = {};
+            if (userData.success) {
+                userData.data.forEach(u => userMap[String(u.id)] = u.username);
+            }
+
+            const productRes = await fetch(`${PRODUCT_SERVICE}/list`);
+            const productData = await productRes.json();
+            const productMap = {};
+            if (productData.success) {
+                productData.data.forEach(p => productMap[String(p.id)] = p.productName);
+            }
+
+            const statusMap = {'0': '已取消', '1': '待支付', '2': '已支付', '3': '已完成'};
+            const tbody = document.getElementById('orderTable');
+            tbody.innerHTML = orders.map(o => `
+                <tr>
+                    <td><small>${o.orderNo}</small></td>
+                    <td>${userMap[String(o.userId)] || o.userId}</td>
+                    <td>${productMap[String(o.productId)] || o.productId}</td>
+                    <td>${o.quantity}</td>
+                    <td>¥${o.totalAmount}</td>
+                    <td><span class="status-badge ${o.status == 2 ? 'status-active' : 'status-inactive'}">${statusMap[o.status] || o.status}</span></td>
+                    <td><small>${o.createTime || '-'}</small></td>
+                </tr>
+            `).join('');
+
+            // 更新订单模态框的用户选择
+            const userSelect = document.getElementById('orderUserId');
+            if (userData.success) {
+                userSelect.innerHTML = userData.data.map(u => 
+                    `<option value="${u.id}">${u.username} - ${u.realName || u.username}</option>`
+                ).join('');
+            }
+        }
+
+        async function createOrder() {
+            const userId = document.getElementById('orderUserId').value;
+            const productId = document.getElementById('orderProductId').value;
+            const quantity = document.getElementById('orderQuantity').value;
+
+            if (!userId || !productId || !quantity) {
+                showToast('请填写完整信息', 'warning');
+                return;
+            }
+
+            showLoading();
+            try {
+                const res = await fetch(`${ORDER_SERVICE}/create`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json; charset=utf-8'},
+                    body: JSON.stringify({userId: parseInt(userId), productId: parseInt(productId), quantity: parseInt(quantity)})
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('订单创建成功', 'success');
+                    bootstrap.Modal.getInstance(document.getElementById('orderModal')).hide();
+                    loadOrders();
+                } else {
+                    showToast(data.message || '创建失败', 'danger');
+                }
+            } catch (e) {
+                showToast('创建失败: ' + e.message, 'danger');
+            }
+            hideLoading();
+        }
+
+        // ===== 工具函数 =====
+        function showLoading() { document.getElementById('loading').style.display = 'flex'; }
+        function hideLoading() { document.getElementById('loading').style.display = 'none'; }
+
+        function showModal(id) { new bootstrap.Modal(document.getElementById(id)).show(); }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast align-items-center text-white bg-${type} border-0`;
+            toast.setAttribute('role', 'alert');
+            toast.innerHTML = `
+                <div class="d-flex">
+                    <div class="toast-body">${message}</div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                </div>
+            `;
+            container.appendChild(toast);
+            const bsToast = new bootstrap.Toast(toast);
+            bsToast.show();
+            toast.addEventListener('hidden.bs.toast', () => toast.remove());
+        }
+
+        // 覆盖showAddUser给按钮用
+        document.addEventListener('DOMContentLoaded', () => {
+            const userBtn = document.querySelector('#userModule button');
+            userBtn.onclick = showAddUser;
+            
+            const productBtn = document.querySelector('#productModule button');
+            productBtn.onclick = showAddProduct;
+        });
+    </script>
+</body>
+</html>
