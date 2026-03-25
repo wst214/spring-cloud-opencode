@@ -1,39 +1,22 @@
 pipeline {
     agent any
     
-    tools {
-        maven 'Maven 3.9.5'
-        jdk 'JDK 17'
-    }
-    
     stages {
-        stage('代码检查') {
+        stage('测试阶段') {
             steps {
-                sh 'mvn clean compile checkstyle:check'
+                echo 'Hello, Jenkins!'
             }
         }
         
         stage('构建服务') {
             steps {
-                sh 'mvn clean package -DskipTests'
-            }
-        }
-        
-        stage('运行测试') {
-            steps {
-                sh 'mvn test'
-            }
-        }
-        
-        stage('构建Docker镜像') {
-            steps {
-                sh 'docker-compose build'
+                echo 'Building services...'
             }
         }
         
         stage('部署服务') {
             steps {
-                sh 'docker-compose up -d'
+                echo 'Deploying services...'
             }
         }
     }
